@@ -15,10 +15,11 @@ int Pbc(int j);
 rowvec shift(rowvec path);
 
 int populationSize = 10;
-int pathLength = 5;
+int pathLength = 20;
+int generations = 100;
+rowvec fittests(generations);
 
 int main() {
-
 
         // Read seed for random numbers
         int p1, p2;
@@ -32,27 +33,58 @@ int main() {
         input.close();
 	//
 
+	cout << "evolvo " << populationSize << " cammini "
+		<< " di lunghezza " << pathLength << endl;
 
-	rowvec path = {1,2,3,4,5};
+	// model path
+	rowvec path = linspace<rowvec>(1,pathLength,pathLength);
+	// array to store paths and their cost
 	mat paths(populationSize, pathLength);
 	colvec costs(populationSize);
 
+	// randomly create
+	// population of paths
 	for (int i=0;i<populationSize;i++) {
 		rowvec newPath = swap(path);
 		paths.row(i) = newPath;
 		costs(i) = cost(newPath);
 	}
+	
+	float p = 5;
 
+	// sort paths with cost
 	uvec indices = sort_index(costs);	
-
 	paths = paths.rows(indices);
-	
-	// più alzo l'esponente, più vengono privilegiati 
-	// i più fit
-	int p = 1;
-	int j = int(populationSize*pow(rnd.Rannyu(),p));
-	
-	paths.print();
+	costs = costs(indices);
+	cout << paths.row(0) << endl;
+
+	cout << "evoluzione per " << generations
+	       	<< " generazioni" <<endl;
+
+	for (int k = 0; k<generations; k++) {
+
+		// select randomly the fittests	
+		// più alzo l'esponente, più vengono privilegiati 
+		// i più fit
+		int j = int(populationSize*pow(rnd.Rannyu(),p));
+
+		paths.row(j) = swap(paths.row(j));
+		costs(j) = cost(paths.row(j));
+		
+		// sort
+		uvec indices = sort_index(costs);	
+		paths = paths.rows(indices);
+		costs = costs(indices);	
+
+		if( !check(paths) ) cout <<
+			"qualche cammino non soddisfa"<<
+			"le condizioni al contorno" << endl;
+		fittests(k) = int(costs(0));
+	}
+
+	fittests.save("costs.txt",raw_ascii);
+
+	cout << paths.row(0)<< endl;
 	return 0;
 
 }
@@ -95,13 +127,17 @@ rowvec shift(rowvec path) {
 	
 
 	int m = floor(rnd.Rannyu(1,pathLength-1));
-	for (int i=1; i<pathLength; i++) {}
-
-
+	for (int i=1; i<pathLength; i++) {
+		rowvec pathTemp = path;
+		path[i]=pathTemp[Pbc(i-m)];
+	
+	}
+	
 }
+
 
 int Pbc(int j) {
 	if(j>4) return j%5+1;
 	return j;
 }
-
+ 
